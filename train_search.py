@@ -66,7 +66,7 @@ def main():
   if not torch.cuda.is_available():
     logging.info('no gpu device available')
     sys.exit(1)
-
+  random.seed(args.seed)
   np.random.seed(args.seed)
   torch.cuda.set_device(args.gpu)
   cudnn.benchmark = True

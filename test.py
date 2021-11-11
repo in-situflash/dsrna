@@ -11,6 +11,7 @@ import genotypes
 import torch.utils
 import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
+import random
 
 from torch.autograd import Variable
 from model import NetworkCIFAR as Network
@@ -44,6 +45,7 @@ def main():
     logging.info('no gpu device available')
     sys.exit(1)
 
+  random.seed(args.seed) # 乱数シードを314に設定
   np.random.seed(args.seed)
   torch.cuda.set_device(args.gpu)
   cudnn.benchmark = True
