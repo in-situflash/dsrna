@@ -188,6 +188,7 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, 
       progress_bar.update(1)
 
       del loss
+      del logits
       torch.cuda.empty_cache()
 
   return top1.avg, objs.avg
@@ -203,8 +204,8 @@ def infer(valid_queue, model, criterion):
     for step, (input, target) in enumerate(valid_queue):
       #input = input.cuda()
       #target = target.cuda(non_blocking=True)
-      input = Variable(input, volatile=True).cuda()
-      target = Variable(target, volatile=True).cuda(non_blocking=True)
+      input = Variable(input).cuda()
+      target = Variable(target).cuda(non_blocking=True)
       logits = model(input)
       loss = criterion(logits, target)
 
