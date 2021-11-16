@@ -50,8 +50,10 @@ class Architect(object):
 
   def _backward_step_unrolled(self, input_train, target_train, input_valid, target_valid, eta, network_optimizer):
     unrolled_model = self._compute_unrolled_model(input_train, target_train, eta, network_optimizer)
-    unrolled_loss = unrolled_model._loss(input_valid, target_valid)
-
+    if self.mode == "PC-DARTS":
+      unrolled_loss = unrolled_model._loss(input_valid, target_valid)
+    elif self.mode == "DSRNA-JB":
+      unrolled_loss = unrolled_model._jr_loss(input_valid, target_valid)
     unrolled_loss.backward()
     dalpha = [v.grad for v in unrolled_model.arch_parameters()]
     vector = [v.grad.data for v in unrolled_model.parameters()]
