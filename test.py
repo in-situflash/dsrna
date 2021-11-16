@@ -2,6 +2,7 @@ import os
 import sys
 import glob
 import numpy as np
+from numpy.core.numeric import outer
 import torch
 import utils
 import logging
@@ -16,6 +17,9 @@ import random
 from torch.autograd import Variable
 from model import NetworkCIFAR as Network
 
+from advertorch.attacks import LinfPGDAttack
+from advertorch.attacks import GradientSignAttack
+from advertorch.context import ctx_noparamgrad_and_eval
 
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
@@ -31,6 +35,7 @@ parser.add_argument('--cutout_length', type=int, default=16, help='cutout length
 parser.add_argument('--drop_path_prob', type=float, default=0.2, help='drop path probability')
 parser.add_argument('--seed', type=int, default=0, help='random seed')
 parser.add_argument('--arch', type=str, default='DARTS', help='which architecture to use')
+parser.add_argument('--test_mode', type=str, choices=['CLEAN', 'ADV'], help='choose test mode')
 args = parser.parse_args()
 
 log_format = '%(asctime)s %(message)s'
@@ -82,26 +87,48 @@ def infer(test_queue, model, criterion):
   top5 = utils.AvgrageMeter()
   model.eval()
 
-  with torch.no_grad():
-    for step, (input, target) in enumerate(test_queue):
-      input = Variable(input).cuda()
-      target = Variable(target).cuda(non_blocking=True)
+  adversary = LinfPGDAttack(
+    model, loss_fn=nn.CrossEntropyLoss(), eps=8./255,
+    nb_iter=10, eps_iter=2./255, rand_init=False, targeted=False)
+  """
+  adversary = GradientSignAttack(
+    model, loss_fn = nn.CrossEntropyLoss(), eps=2./255,
+      targeted=False)
+  """
 
+  #with torch.no_grad():
+  for step, (input, target) in enumerate(test_queue):
+    with torch.no_grad():
+      input = Variable(input, requires_grad=False).cuda()
+      target = Variable(target, requires_grad=False).cuda(non_blocking=True)
+
+    if args.test_mode == 'CLEAN':
       logits, _ = model(input)
       loss = criterion(logits, target)
 
-      prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
-      n = input.size(0)
-      objs.update(loss.item(), n)
-      top1.update(prec1.item(), n)
-      top5.update(prec5.item(), n)
+    elif args.test_mode == 'ADV':
+      with ctx_noparamgrad_and_eval(model):
+        adv_input = adversary.perturb(input, target)
+      #print(adv_targeted.size())
+      with torch.no_grad():
+        logits, _ = model(adv_input)
+        loss = criterion(logits, target)
+    
+    prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+    n = input.size(0)
+    objs.update(loss.item(), n)
+    top1.update(prec1.item(), n)
+    top5.update(prec5.item(), n)
 
-      if step % args.report_freq == 0:
-        logging.info('test %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+    del input
+    del target
+    del loss
 
-    return top1.avg, objs.avg
+    if step % args.report_freq == 0:
+      logging.info('test %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+
+  return top1.avg, objs.avg
 
 
 if __name__ == '__main__':
   main() 
-
