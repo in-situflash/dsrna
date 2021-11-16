@@ -1,4 +1,4 @@
-# AdvRush: Searching for Adversarially Robust Neural Architectures
+# DSRNA: Differentiable Search of Robust Neural Architectures
 This repository is replicate the experiment on DSRNA.
 > [DSRNA: Differentiable Search of Robust Neural Architectures (CVPR2021)](https://openaccess.thecvf.com/content/CVPR2021/html/Hosseini_DSRNA_Differentiable_Search_of_Robust_Neural_Architectures_CVPR_2021_paper.html)
 
