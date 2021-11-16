@@ -3,6 +3,7 @@
 # batch size = 128
 #
 
+# Train PC-DARTS
 for i in 31
 do
 python3 train.py \
@@ -15,6 +16,7 @@ python3 train.py \
     --momentum 0.9 --weight_decay 3e-5 --arch PCDARTS$i
 done
 
+# Train DSRNA-JB
 for i in 72
 do
 python3 train.py \

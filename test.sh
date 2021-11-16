@@ -1,3 +1,4 @@
+# Test PC-DARTS
 for i in 31
 do
 python3 test.py \
@@ -10,6 +11,7 @@ python3 test.py \
 --batch_size 64
 done
 
+# Test DSRNA-JB
 for i in 72
 do
 python3 test.py \
