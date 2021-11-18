@@ -6,7 +6,7 @@ python3 ../test.py \
 --cutout \
 --seed $i \
 --arch PCDARTS$i \
---model_path EXP/pcdarts$i.pt \
+--model_path ../EXP/pcdarts$i.pt \
 --layers 20 --init_channels 36 \
 --batch_size 64 \
 --test_mode ADV
@@ -20,7 +20,7 @@ python3 ../test.py \
 --cutout \
 --seed $i \
 --arch DSRNAJB$i \
---model_path EXP/dsrnajb$i.pt \
+--model_path ../EXP/dsrnajb$i.pt \
 --layers 20 --init_channels 36 \
 --batch_size 64 \
 --test_mode ADV
