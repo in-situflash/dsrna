@@ -36,6 +36,7 @@ parser.add_argument('--drop_path_prob', type=float, default=0.2, help='drop path
 parser.add_argument('--seed', type=int, default=0, help='random seed')
 parser.add_argument('--arch', type=str, default='DARTS', help='which architecture to use')
 parser.add_argument('--test_mode', type=str, choices=['CLEAN', 'ADV'], help='choose test mode')
+parser.add_argument('--attack', type=str, choices=['PGD10', 'FGSM'], help='choose attack')
 args = parser.parse_args()
 
 log_format = '%(asctime)s %(message)s'
@@ -87,14 +88,15 @@ def infer(test_queue, model, criterion):
   top5 = utils.AvgrageMeter()
   model.eval()
 
-  adversary = LinfPGDAttack(
+  if args.attack == 'PGD10':
+    adversary = LinfPGDAttack(
     model, loss_fn=nn.CrossEntropyLoss(), eps=8./255,
     nb_iter=10, eps_iter=2./255, rand_init=False, targeted=False)
-  """
-  adversary = GradientSignAttack(
+
+  elif args.attack == 'FGSM':
+    adversary = GradientSignAttack(
     model, loss_fn = nn.CrossEntropyLoss(), eps=2./255,
       targeted=False)
-  """
 
   #with torch.no_grad():
   for step, (input, target) in enumerate(test_queue):
