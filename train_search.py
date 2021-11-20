@@ -164,7 +164,7 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, 
       #input_search.requires_grad = True
       target_search = Variable(target_search, requires_grad=False).cuda(non_blocking=True)
 
-      if epoch>=-15:
+      if epoch>=15:
         architect.step(input, target, input_search, target_search, lr, optimizer, unrolled=args.unrolled)
 
       optimizer.zero_grad()

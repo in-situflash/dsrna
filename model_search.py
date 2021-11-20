@@ -175,9 +175,9 @@ class Network(nn.Module):
     n_proj = 1
     reg = JacobianReg(n=n_proj)
     loss_JR = reg(input, logits)
-    del reg
-    del logits
-    torch.cuda.empty_cache()
+    #del reg
+    #del logits
+    #torch.cuda.empty_cache()
     input.requires_grad = False
     return loss_super + lambda_JR * loss_JR
 
