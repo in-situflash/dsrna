@@ -13,7 +13,8 @@ python3 ../test.py \
 done
 
 # Test DSRNA-JB
-for i in 72
+#for i in 72
+for i in 64
 do
 python3 ../test.py \
 --auxiliary \

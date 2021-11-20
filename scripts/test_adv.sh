@@ -13,13 +13,15 @@ python3 ../test.py \
 done
 
 # Test DSRNA-JB
-for i in 72
+#for i in 72
+for i in 64
 do
 python3 ../test.py \
 --auxiliary \
 --cutout \
 --seed $i \
 --arch DSRNAJB$i \
+--attack PGD10 \
 --model_path ../EXP/dsrnajb$i.pt \
 --layers 20 --init_channels 36 \
 --batch_size 64 \
