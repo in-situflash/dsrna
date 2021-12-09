@@ -19,6 +19,7 @@ from model import NetworkCIFAR as Network
 
 from advertorch.attacks import LinfPGDAttack
 from advertorch.attacks import GradientSignAttack
+from advertorch.attacks import CarliniWagnerL2Attack
 from advertorch.context import ctx_noparamgrad_and_eval
 
 parser = argparse.ArgumentParser("cifar")
@@ -36,7 +37,7 @@ parser.add_argument('--drop_path_prob', type=float, default=0.2, help='drop path
 parser.add_argument('--seed', type=int, default=0, help='random seed')
 parser.add_argument('--arch', type=str, default='DARTS', help='which architecture to use')
 parser.add_argument('--test_mode', type=str, choices=['CLEAN', 'ADV'], help='choose test mode')
-parser.add_argument('--attack', type=str, choices=['PGD10', 'FGSM'], help='choose attack')
+parser.add_argument('--attack', type=str, choices=['PGD10', 'PGD20', 'PGD100', 'FGSM'], help='choose attack')
 args = parser.parse_args()
 
 log_format = '%(asctime)s %(message)s'
@@ -92,6 +93,16 @@ def infer(test_queue, model, criterion):
     adversary = LinfPGDAttack(
     model, loss_fn=nn.CrossEntropyLoss(), eps=8./255,
     nb_iter=10, eps_iter=2./255, rand_init=False, targeted=False)
+  
+  elif args.attack == 'PGD20':
+    adversary = LinfPGDAttack(
+    model, loss_fn=nn.CrossEntropyLoss(), eps=8./255,
+    nb_iter=20, eps_iter=2./255, rand_init=False, targeted=False)
+
+  elif args.attack == 'PGD100':
+    adversary = LinfPGDAttack(
+    model, loss_fn=nn.CrossEntropyLoss(), eps=8./255,
+    nb_iter=100, eps_iter=2./255, rand_init=False, targeted=False)
 
   elif args.attack == 'FGSM':
     adversary = GradientSignAttack(
