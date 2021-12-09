@@ -15,16 +15,17 @@ import torch.backends.cudnn as cudnn
 from tqdm import tqdm
 from datetime import datetime as dt
 import random
-
 from torch.autograd import Variable
 from model import NetworkCIFAR as Network
 
+from jacobian import JacobianReg
 
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
 parser.add_argument('--set', type=str, default='cifar10', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=96, help='batch size')
 parser.add_argument('--learning_rate', type=float, default=0.025, help='init learning rate')
+parser.add_argument('--learning_rate_min', type=float, default=0.0, help='min learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
@@ -42,6 +43,7 @@ parser.add_argument('--save', type=str, default='EXP', help='experiment name')
 parser.add_argument('--seed', type=int, default=0, help='random seed')
 parser.add_argument('--arch', type=str, default='PCDARTS', help='which architecture to use')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
+parser.add_argument('--train_mode', type=str, choices=['PC-DARTS', 'DSRNA-JB'], help='choose training mode')
 args = parser.parse_args()
 
 args.save = 'eval-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
@@ -88,6 +90,10 @@ def main():
       weight_decay=args.weight_decay
       )
 
+  lambda_JR = 0.01
+  n_proj = 1 
+  reg = JacobianReg(n=n_proj)
+
   train_transform, valid_transform = utils._data_transforms_cifar10(args)
   if args.set=='cifar100':
       train_data = dset.CIFAR100(root=args.data, train=True, download=True, transform=train_transform)
@@ -104,7 +110,9 @@ def main():
   valid_queue = torch.utils.data.DataLoader(
       valid_data, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=2)
 
-  scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, float(args.epochs))
+  scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, float(args.epochs), eta_min=args.learning_rate_min)
+
   best_acc = 0.0
 
   now = dt.now()
@@ -114,7 +122,7 @@ def main():
     logging.info('epoch %d lr %e', epoch, scheduler.get_last_lr()[0])
     model.drop_path_prob = args.drop_path_prob * epoch / args.epochs
 
-    train_acc, train_obj = train(train_queue, model, criterion, optimizer, start, epoch)
+    train_acc, train_obj = train(train_queue, model, criterion, optimizer, start, epoch, reg, args.train_mode)
     scheduler.step()
 
     logging.info('train_acc %f', train_acc)
@@ -127,7 +135,7 @@ def main():
     utils.save(model, os.path.join(args.save, 'weights.pt'))
 
 
-def train(train_queue, model, criterion, optimizer, start, epoch):
+def train(train_queue, model, criterion, optimizer, start, epoch, reg, mode):
   objs = utils.AvgrageMeter()
   top1 = utils.AvgrageMeter()
   top5 = utils.AvgrageMeter()
@@ -137,12 +145,28 @@ def train(train_queue, model, criterion, optimizer, start, epoch):
     progress_bar.set_description(f"Epoch[{epoch}/{args.epochs}](training) start: " + start)
 
     for step, (input, target) in enumerate(train_queue):
-      input = Variable(input).cuda()
-      target = Variable(target).cuda(non_blocking=True)
+      #input = Variable(input).cuda()
+      #target = Variable(target).cuda(non_blocking=True)
+      input = Variable(input, requires_grad=False).cuda()
+      target = Variable(target, requires_grad=False).cuda(non_blocking=True)
 
       optimizer.zero_grad()
       logits, logits_aux = model(input)
-      loss = criterion(logits, target)
+      
+      if mode == 'DSRNA-JB':
+        loss_super = criterion(logits, target)
+        input.requires_grad = True
+        logits, logits_aux = model(input) # important
+        lambda_JR = 0.01
+        loss_JR = reg(input, logits)
+        loss = loss_super + lambda_JR*loss_JR
+  
+      elif mode == 'PC-DARTS':
+        loss = criterion(logits, target)
+      
+      else:
+        exit()
+
       if args.auxiliary:
         loss_aux = criterion(logits_aux, target)
         loss += args.auxiliary_weight*loss_aux
